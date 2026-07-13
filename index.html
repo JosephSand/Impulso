@@ -118,12 +118,27 @@
                 Volver a proyectos
             </button>
             
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-6">
-                <h2 id="detail-title" class="text-2xl md:text-4xl font-bold text-slate-800 mb-2">Nombre del Proyecto</h2>
-                <p class="text-slate-500 text-sm flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                    Creado el: <span id="detail-date"></span>
-                </p>
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <div class="flex items-center gap-3 mb-2">
+                        <h2 id="detail-title" class="text-2xl md:text-4xl font-bold text-slate-800">Nombre del Proyecto</h2>
+                        <span id="detail-status-badge" class="hidden px-3 py-1 bg-emerald-100 text-emerald-700 text-sm font-bold rounded-full">Terminado</span>
+                    </div>
+                    <p class="text-slate-500 text-sm flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                        Creado el: <span id="detail-date"></span>
+                    </p>
+                </div>
+                <div class="flex gap-2 w-full md:w-auto">
+                    <button id="btn-toggle-status" onclick="app.toggleProjectStatus()" class="flex-1 md:flex-none bg-emerald-50 text-emerald-600 hover:bg-emerald-100 px-4 py-2 rounded-xl font-medium transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> 
+                        <span>Terminar</span>
+                    </button>
+                    <button id="btn-delete-project" onclick="app.deleteProject(false)" class="flex-1 md:flex-none bg-red-50 text-red-600 hover:bg-red-100 px-4 py-2 rounded-xl font-medium transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg> 
+                        <span>Eliminar</span>
+                    </button>
+                </div>
             </div>
 
             <!-- Tres columnas de contenido (Pasos, Notas, Gastos) -->
@@ -209,6 +224,7 @@
                 id: 'proj_' + Date.now(),
                 title: 'Crear Tienda Online',
                 createdAt: new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }),
+                completed: false,
                 steps: [
                     { id: 1, text: 'Comprar dominio', done: true },
                     { id: 2, text: 'Diseñar logo', done: false }
@@ -426,12 +442,14 @@
                         let nextStepText = "Sin pasos definidos";
                         
                         const nextStep = project.steps.find(s => !s.done);
-                        if (nextStep) nextStepText = nextStep.text;
+                        if (project.completed) nextStepText = "Proyecto finalizado";
+                        else if (nextStep) nextStepText = nextStep.text;
                         else if (totalSteps > 0 && totalSteps === completedSteps) nextStepText = "¡Todos los pasos completados!";
 
                         card.innerHTML = `
-                            <div class="absolute top-0 left-0 w-1 h-full bg-indigo-500 transform origin-bottom scale-y-0 group-hover:scale-y-100 transition-transform"></div>
-                            <h4 class="text-xl font-bold text-slate-800 mb-1 group-hover:text-indigo-600 transition-colors">${project.title}</h4>
+                            <div class="absolute top-0 left-0 w-1 h-full ${project.completed ? 'bg-emerald-500' : 'bg-indigo-500'} transform origin-bottom scale-y-0 group-hover:scale-y-100 transition-transform"></div>
+                            ${project.completed ? '<span class="absolute top-4 right-4 bg-emerald-100 text-emerald-700 text-[10px] uppercase tracking-wider font-bold px-2 py-1 rounded">Terminado</span>' : ''}
+                            <h4 class="text-xl font-bold ${project.completed ? 'text-slate-500 line-through' : 'text-slate-800'} mb-1 group-hover:text-indigo-600 transition-colors pr-16">${project.title}</h4>
                             <p class="text-xs text-slate-400 mb-4">${project.createdAt}</p>
                             
                             <div class="mt-auto pt-4 border-t border-slate-50">
@@ -459,6 +477,19 @@
 
                 detailTitle.innerText = project.title;
                 detailDate.innerText = project.createdAt;
+                
+                const statusBadge = document.getElementById('detail-status-badge');
+                const btnToggleStatus = document.getElementById('btn-toggle-status');
+
+                if (project.completed) {
+                    statusBadge.classList.remove('hidden');
+                    btnToggleStatus.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg> Reabrir`;
+                    btnToggleStatus.className = "flex-1 md:flex-none bg-slate-100 text-slate-600 hover:bg-slate-200 px-4 py-2 rounded-xl font-medium transition-colors flex items-center justify-center gap-2";
+                } else {
+                    statusBadge.classList.add('hidden');
+                    btnToggleStatus.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg> Terminar`;
+                    btnToggleStatus.className = "flex-1 md:flex-none bg-emerald-50 text-emerald-600 hover:bg-emerald-100 px-4 py-2 rounded-xl font-medium transition-colors flex items-center justify-center gap-2";
+                }
 
                 this.renderSteps(project);
                 this.renderNotes(project);
@@ -534,11 +565,48 @@
             },
 
             // Acciones
+            toggleProjectStatus() {
+                const project = state.projects.find(p => p.id === state.currentProjectId);
+                if (project) {
+                    project.completed = !project.completed;
+                    this.saveData();
+                    this.renderProjectDetail();
+                    this.updateCharts();
+                }
+            },
+
+            deleteProject(confirming = false) {
+                const btn = document.getElementById('btn-delete-project');
+                if (!confirming) {
+                    btn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg> ¿Seguro?`;
+                    btn.classList.add('bg-red-600', 'text-white', 'hover:bg-red-700');
+                    btn.classList.remove('bg-red-50', 'text-red-600', 'hover:bg-red-100');
+                    btn.setAttribute('onclick', 'app.deleteProject(true)');
+                    
+                    // Restaurar botón después de 3 segundos si no confirma
+                    setTimeout(() => {
+                        if (document.getElementById('btn-delete-project')) {
+                            btn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg> Eliminar`;
+                            btn.classList.remove('bg-red-600', 'text-white', 'hover:bg-red-700');
+                            btn.classList.add('bg-red-50', 'text-red-600', 'hover:bg-red-100');
+                            btn.setAttribute('onclick', 'app.deleteProject(false)');
+                        }
+                    }, 3000);
+                    return;
+                }
+                
+                // Eliminación real
+                state.projects = state.projects.filter(p => p.id !== state.currentProjectId);
+                this.saveData();
+                this.goHome();
+            },
+
             addProject(title) {
                 const newProject = {
                     id: 'proj_' + Date.now(),
                     title: title,
                     createdAt: new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }),
+                    completed: false,
                     steps: [],
                     notes: [],
                     expenses: []
@@ -647,6 +715,7 @@
     </script>
 </body>
 </html>
+
 
 
 
