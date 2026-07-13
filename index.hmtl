@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Impulso - Gestor de Proyectos</title>
+    <!-- Librerías Externas -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -51,6 +52,7 @@
         
         <!-- VISTA: DASHBOARD -->
         <div id="view-dashboard" class="fade-in block">
+            
             <!-- Sección de creación rápida -->
             <div class="bg-white rounded-2xl shadow-sm p-6 md:p-8 mb-8 text-center border border-slate-100">
                 <h2 class="text-2xl md:text-3xl font-bold text-slate-700 mb-2">¿Qué proyecto tienes en mente?</h2>
@@ -67,7 +69,7 @@
                 </form>
             </div>
 
-            <!-- Encabezado y controles de la lista -->
+            <!-- Encabezado y controles de la lista de proyectos -->
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-4 gap-4">
                 <div class="flex items-center gap-3">
                     <h3 class="text-xl font-bold text-slate-700">Tus Proyectos Activos</h3>
@@ -79,7 +81,7 @@
                 </button>
             </div>
 
-            <!-- Gráficas de Productividad -->
+            <!-- Gráficas de Productividad (Ocultas por defecto) -->
             <div id="dashboard-stats" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 hidden">
                 <div class="bg-white rounded-2xl shadow-sm p-6 border border-slate-100">
                     <h3 class="text-lg font-bold text-slate-700 mb-4 text-center">Productividad de Tareas</h3>
@@ -95,10 +97,12 @@
                 </div>
             </div>
             
+            <!-- Lista de Proyectos -->
             <div id="projects-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                <!-- Los proyectos se renderizarán aquí -->
+                <!-- Los proyectos se renderizan mediante JavaScript -->
             </div>
             
+            <!-- Estado Vacío (Sin proyectos) -->
             <div id="empty-state" class="hidden text-center py-16">
                 <svg class="w-16 h-16 text-slate-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
                 <p class="text-lg text-slate-500 font-medium">Aún no tienes proyectos.</p>
@@ -199,7 +203,6 @@
 
     <script>
         // --- ESTADO DE LA APLICACIÓN (EN MEMORIA) ---
-        // Iniciamos con un proyecto de ejemplo para que no esté vacío.
         const state = {
             currentView: 'dashboard', // 'dashboard' | 'project-detail'
             currentProjectId: null,
@@ -273,7 +276,7 @@
                 splash.style.opacity = '0';
                 setTimeout(() => {
                     splash.style.display = 'none';
-                }, 500); // Coincide con duration-500 de CSS
+                }, 500);
             },
 
             // --- GRÁFICAS ---
@@ -404,13 +407,12 @@
                     emptyState.classList.remove('hidden');
                 } else {
                     emptyState.classList.add('hidden');
-                    // Ordenar para mostrar los más nuevos primero (opcional, aquí mantenemos orden)
+                    
                     [...state.projects].reverse().forEach(project => {
                         const card = document.createElement('div');
                         card.className = "bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-md transition-shadow cursor-pointer flex flex-col group relative overflow-hidden";
                         card.onclick = () => this.goToProject(project.id);
                         
-                        // Calcular progreso de pasos
                         const totalSteps = project.steps.length;
                         const completedSteps = project.steps.filter(s => s.done).length;
                         let nextStepText = "Sin pasos definidos";
@@ -481,7 +483,6 @@
                 if(project.notes.length === 0) {
                     notesList.innerHTML = '<p class="text-sm text-slate-400 text-center py-4">Sin notas aún.</p>';
                 }
-                // Mostrar más nuevas primero
                 [...project.notes].reverse().forEach(note => {
                     const div = document.createElement('div');
                     div.className = "bg-amber-50/50 p-3 rounded-xl border border-amber-100 relative group";
@@ -544,6 +545,7 @@
                 if (step) {
                     step.done = !step.done;
                     this.renderSteps(project);
+                    this.updateCharts(); // Actualizar gráficas si están abiertas
                 }
             },
 
@@ -561,6 +563,7 @@
                     project.expenses = project.expenses.filter(e => e.id !== itemId);
                     this.renderExpenses(project);
                 }
+                this.updateCharts(); // Actualizar gráficas tras borrar
             },
 
             setupEventListeners() {
@@ -584,6 +587,7 @@
                         project.steps.push({ id: Date.now(), text: text, done: false });
                         input.value = '';
                         this.renderSteps(project);
+                        this.updateCharts();
                     }
                 });
 
@@ -597,6 +601,7 @@
                         project.notes.push({ id: Date.now(), text: text });
                         input.value = '';
                         this.renderNotes(project);
+                        this.updateCharts();
                     }
                 });
 
@@ -614,6 +619,7 @@
                         descInput.value = '';
                         amountInput.value = '';
                         this.renderExpenses(project);
+                        this.updateCharts();
                     }
                 });
             }
@@ -627,3 +633,5 @@
     </script>
 </body>
 </html>
+
+
