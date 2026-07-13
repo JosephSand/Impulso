@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Impulso - Gestor de Proyectos</title>
+    <!-- Librerías Externas -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Estilos personalizados para animaciones suaves */
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* Ocultar barra de desplazamiento pero permitir scroll */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen">
+
+    <!-- PANTALLA DE BIENVENIDA / SPLASH SCREEN -->
+    <div id="view-splash" class="fixed inset-0 bg-indigo-600 z-[100] flex flex-col items-center justify-center text-white cursor-pointer transition-opacity duration-500" onclick="app.dismissSplash()">
+        <div class="max-w-3xl px-6 text-center">
+            <p id="splash-quote" class="text-3xl md:text-5xl font-light italic mb-12 fade-in leading-tight">Cargando...</p>
+            <p class="text-indigo-200 animate-pulse text-lg font-medium tracking-wide">Toca la pantalla para continuar</p>
+        </div>
+    </div>
+
+    <!-- Navbar / Header -->
+    <header class="bg-indigo-600 text-white shadow-md sticky top-0 z-10">
+        <div class="max-w-5xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-2 cursor-pointer" onclick="app.goHome()">
+                <svg class="w-6 h-6 text-indigo-200" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                <h1 class="text-xl font-bold tracking-wide">Impulso</h1>
+            </div>
+            <div class="text-sm font-medium text-indigo-200">En Movimiento</div>
+        </div>
+    </header>
+
+    <!-- Contenedor Principal -->
+    <main class="max-w-5xl mx-auto p-4 md:p-6 pb-20">
+        
+        <!-- VISTA: DASHBOARD -->
+        <div id="view-dashboard" class="fade-in block">
+            
+            <!-- Sección de creación rápida -->
+            <div class="bg-white rounded-2xl shadow-sm p-6 md:p-8 mb-8 text-center border border-slate-100">
+                <h2 class="text-2xl md:text-3xl font-bold text-slate-700 mb-2">¿Qué proyecto tienes en mente?</h2>
+                <p class="text-slate-500 mb-6">Agrega una nueva idea y no dejes que se detenga.</p>
+                
+                <form id="form-new-project" class="max-w-xl mx-auto flex flex-col md:flex-row gap-3">
+                    <input type="text" id="input-new-project" placeholder="Ej. Lanzar mi podcast, Remodelar cocina..." required
+                        class="flex-1 px-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all text-lg">
+                    <button type="submit" 
+                        class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        Crear
+                    </button>
+                </form>
+            </div>
+
+            <!-- Encabezado y controles de la lista de proyectos -->
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-4 gap-4">
+                <div class="flex items-center gap-3">
+                    <h3 class="text-xl font-bold text-slate-700">Tus Proyectos Activos</h3>
+                    <span id="project-count" class="text-sm font-medium bg-slate-200 text-slate-600 py-1 px-3 rounded-full">0</span>
+                </div>
+                <button onclick="app.toggleStats()" class="text-sm font-medium bg-indigo-50 text-indigo-700 border border-indigo-200 py-2 px-4 rounded-xl hover:bg-indigo-100 flex items-center gap-2 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                    <span id="btn-stats-text">Ver Productividad</span>
+                </button>
+            </div>
+
+            <!-- Gráficas de Productividad (Ocultas por defecto) -->
+            <div id="dashboard-stats" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 hidden">
+                <div class="bg-white rounded-2xl shadow-sm p-6 border border-slate-100">
+                    <h3 class="text-lg font-bold text-slate-700 mb-4 text-center">Productividad de Tareas</h3>
+                    <div class="relative h-48 w-full flex justify-center items-center">
+                        <canvas id="tasksChart"></canvas>
+                    </div>
+                </div>
+                <div class="bg-white rounded-2xl shadow-sm p-6 border border-slate-100">
+                    <h3 class="text-lg font-bold text-slate-700 mb-4 text-center">Gastos por Proyecto</h3>
+                    <div class="relative h-48 w-full flex justify-center items-center">
+                        <canvas id="expensesChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Lista de Proyectos -->
+            <div id="projects-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                <!-- Los proyectos se renderizan mediante JavaScript -->
+            </div>
+            
+            <!-- Estado Vacío (Sin proyectos) -->
+            <div id="empty-state" class="hidden text-center py-16">
+                <svg class="w-16 h-16 text-slate-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                <p class="text-lg text-slate-500 font-medium">Aún no tienes proyectos.</p>
+                <p class="text-slate-400">¡Escribe uno arriba para comenzar!</p>
+            </div>
+        </div>
+
+        <!-- VISTA: DETALLE DEL PROYECTO -->
+        <div id="view-project-detail" class="hidden fade-in">
+            <!-- Cabecera del Proyecto -->
+            <button onclick="app.goHome()" class="mb-6 flex items-center gap-2 text-indigo-600 hover:text-indigo-800 font-medium transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                Volver a proyectos
+            </button>
+            
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-6">
+                <h2 id="detail-title" class="text-2xl md:text-4xl font-bold text-slate-800 mb-2">Nombre del Proyecto</h2>
+                <p class="text-slate-500 text-sm flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    Creado el: <span id="detail-date"></span>
+                </p>
+            </div>
+
+            <!-- Tres columnas de contenido (Pasos, Notas, Gastos) -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                <!-- Columna: Siguientes Pasos -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 flex flex-col h-[500px]">
+                    <div class="flex items-center gap-2 mb-4 text-emerald-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+                        <h3 class="text-lg font-bold text-slate-700">Siguientes Pasos</h3>
+                    </div>
+                    
+                    <form id="form-step" class="mb-4 flex gap-2">
+                        <input type="text" id="input-step" placeholder="Ej. Investigar mercado..." required
+                            class="flex-1 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-emerald-500 text-sm">
+                        <button type="submit" class="bg-emerald-100 text-emerald-700 p-2 rounded-lg hover:bg-emerald-200 transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        </button>
+                    </form>
+
+                    <div id="steps-list" class="flex-1 overflow-y-auto pr-2 space-y-2 no-scrollbar">
+                        <!-- Pasos -->
+                    </div>
+                </div>
+
+                <!-- Columna: Notas -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 flex flex-col h-[500px]">
+                    <div class="flex items-center gap-2 mb-4 text-amber-500">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                        <h3 class="text-lg font-bold text-slate-700">Notas</h3>
+                    </div>
+                    
+                    <form id="form-note" class="mb-4 flex flex-col gap-2">
+                        <textarea id="input-note" placeholder="Escribe una idea, contacto, o enlace..." required rows="2"
+                            class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-amber-400 text-sm resize-none"></textarea>
+                        <button type="submit" class="bg-amber-100 text-amber-700 py-2 rounded-lg hover:bg-amber-200 transition-colors text-sm font-semibold">
+                            Guardar Nota
+                        </button>
+                    </form>
+
+                    <div id="notes-list" class="flex-1 overflow-y-auto pr-2 space-y-3 no-scrollbar">
+                        <!-- Notas -->
+                    </div>
+                </div>
+
+                <!-- Columna: Gastos -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 flex flex-col h-[500px]">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-2 text-rose-500">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <h3 class="text-lg font-bold text-slate-700">Gastos</h3>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xs text-slate-500 block">Total</span>
+                            <span id="expense-total" class="font-bold text-rose-600">$0.00</span>
+                        </div>
+                    </div>
+                    
+                    <form id="form-expense" class="mb-4 flex gap-2">
+                        <input type="text" id="input-expense-desc" placeholder="Descripción" required
+                            class="w-3/5 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-rose-400 text-sm">
+                        <input type="number" id="input-expense-amount" placeholder="$" step="0.01" min="0" required
+                            class="w-2/5 px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-rose-400 text-sm">
+                        <button type="submit" class="bg-rose-100 text-rose-700 p-2 rounded-lg hover:bg-rose-200 transition-colors">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        </button>
+                    </form>
+
+                    <div id="expenses-list" class="flex-1 overflow-y-auto pr-2 space-y-2 no-scrollbar">
+                        <!-- Gastos -->
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // --- ESTADO DE LA APLICACIÓN (EN MEMORIA) ---
+        const state = {
+            currentView: 'dashboard', // 'dashboard' | 'project-detail'
+            currentProjectId: null,
+            showStats: false,
+            projects: [
+                {
+                    id: 'proj_' + Date.now(),
+                    title: 'Crear Tienda Online',
+                    createdAt: new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }),
+                    steps: [
+                        { id: 1, text: 'Comprar dominio', done: true },
+                        { id: 2, text: 'Diseñar logo', done: false }
+                    ],
+                    notes: [
+                        { id: 1, text: 'Usar Shopify o WooCommerce. Hay que comparar precios.' }
+                    ],
+                    expenses: [
+                        { id: 1, desc: 'Dominio anual', amount: 12.50 }
+                    ]
+                }
+            ]
+        };
+
+        // --- REFERENCIAS AL DOM ---
+        const viewDashboard = document.getElementById('view-dashboard');
+        const viewProjectDetail = document.getElementById('view-project-detail');
+        const projectsContainer = document.getElementById('projects-container');
+        const emptyState = document.getElementById('empty-state');
+        const projectCount = document.getElementById('project-count');
+
+        // Referencias Detalle Proyecto
+        const detailTitle = document.getElementById('detail-title');
+        const detailDate = document.getElementById('detail-date');
+        const stepsList = document.getElementById('steps-list');
+        const notesList = document.getElementById('notes-list');
+        const expensesList = document.getElementById('expenses-list');
+        const expenseTotal = document.getElementById('expense-total');
+
+        // --- VARIABLES GLOBALES PARA GRÁFICAS Y FRASES ---
+        let tasksChartInstance = null;
+        let expensesChartInstance = null;
+        
+        const motivationalQuotes = [
+            "El secreto para salir adelante es comenzar.",
+            "No dejes que lo que no puedes hacer interfiera con lo que puedes hacer.",
+            "La mejor forma de predecir el futuro es creándolo.",
+            "Un viaje de mil millas comienza con un solo paso.",
+            "La productividad nunca es un accidente. Siempre es el resultado de un compromiso con la excelencia.",
+            "Haz hoy lo que otros no quieren, haz mañana lo que otros no pueden.",
+            "Tus ideas valen oro, pero su ejecución vale el mundo entero.",
+            "No cuentes los días, haz que los días cuenten."
+        ];
+
+        // --- CONTROLADORES DE LA APP ---
+        const app = {
+            init() {
+                this.showSplash();
+                this.renderDashboard();
+                this.setupEventListeners();
+            },
+
+            // --- SPLASH SCREEN ---
+            showSplash() {
+                const quoteEl = document.getElementById('splash-quote');
+                const randomQuote = motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)];
+                quoteEl.innerText = `"${randomQuote}"`;
+            },
+
+            dismissSplash() {
+                const splash = document.getElementById('view-splash');
+                splash.style.opacity = '0';
+                setTimeout(() => {
+                    splash.style.display = 'none';
+                }, 500);
+            },
+
+            // --- GRÁFICAS ---
+            toggleStats() {
+                state.showStats = !state.showStats;
+                const btnText = document.getElementById('btn-stats-text');
+                if (btnText) {
+                    btnText.innerText = state.showStats ? 'Ocultar Productividad' : 'Ver Productividad';
+                }
+                this.updateCharts();
+            },
+
+            updateCharts() {
+                const statsContainer = document.getElementById('dashboard-stats');
+                
+                if (state.projects.length === 0 || !state.showStats) {
+                    statsContainer.classList.add('hidden');
+                    return;
+                }
+                statsContainer.classList.remove('hidden');
+
+                // Datos para Tareas
+                let totalCompleted = 0;
+                let totalPending = 0;
+                
+                // Datos para Gastos
+                const projectNames = [];
+                const projectExpenses = [];
+
+                state.projects.forEach(p => {
+                    totalCompleted += p.steps.filter(s => s.done).length;
+                    totalPending += p.steps.filter(s => !s.done).length;
+                    
+                    const pTotalExp = p.expenses.reduce((acc, curr) => acc + curr.amount, 0);
+                    if (pTotalExp > 0) {
+                        projectNames.push(p.title);
+                        projectExpenses.push(pTotalExp);
+                    }
+                });
+
+                // Renderizar Gráfica de Tareas
+                const ctxTasks = document.getElementById('tasksChart').getContext('2d');
+                if (tasksChartInstance) tasksChartInstance.destroy();
+                
+                if (totalCompleted === 0 && totalPending === 0) {
+                    tasksChartInstance = new Chart(ctxTasks, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Sin tareas'],
+                            datasets: [{ data: [1], backgroundColor: ['#e2e8f0'], borderWidth: 0 }]
+                        },
+                        options: { responsive: true, maintainAspectRatio: false, plugins: { tooltip: { enabled: false }, legend: { position: 'right' } } }
+                    });
+                } else {
+                    tasksChartInstance = new Chart(ctxTasks, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Completadas', 'Pendientes'],
+                            datasets: [{
+                                data: [totalCompleted, totalPending],
+                                backgroundColor: ['#10b981', '#f59e0b'],
+                                borderWidth: 0
+                            }]
+                        },
+                        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
+                    });
+                }
+
+                // Renderizar Gráfica de Gastos
+                const ctxExpenses = document.getElementById('expensesChart').getContext('2d');
+                if (expensesChartInstance) expensesChartInstance.destroy();
+
+                if (projectNames.length === 0) {
+                     expensesChartInstance = new Chart(ctxExpenses, {
+                        type: 'bar',
+                        data: {
+                            labels: ['Sin gastos'],
+                            datasets: [{ label: 'Gastos', data: [0], backgroundColor: '#e2e8f0' }]
+                        },
+                        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } }, plugins: { legend: { display: false } } }
+                    });
+                } else {
+                    expensesChartInstance = new Chart(ctxExpenses, {
+                        type: 'bar',
+                        data: {
+                            labels: projectNames,
+                            datasets: [{
+                                label: 'Gasto Total ($)',
+                                data: projectExpenses,
+                                backgroundColor: '#f43f5e',
+                                borderRadius: 4
+                            }]
+                        },
+                        options: { 
+                            responsive: true, 
+                            maintainAspectRatio: false,
+                            scales: { y: { beginAtZero: true } },
+                            plugins: { legend: { display: false } }
+                        }
+                    });
+                }
+            },
+
+            // Navegación
+            goHome() {
+                state.currentView = 'dashboard';
+                state.currentProjectId = null;
+                viewProjectDetail.classList.add('hidden');
+                viewDashboard.classList.remove('hidden');
+                this.renderDashboard();
+            },
+
+            goToProject(id) {
+                state.currentProjectId = id;
+                state.currentView = 'project-detail';
+                viewDashboard.classList.add('hidden');
+                viewProjectDetail.classList.remove('hidden');
+                this.renderProjectDetail();
+            },
+
+            // Renderizado del Dashboard
+            renderDashboard() {
+                projectsContainer.innerHTML = '';
+                projectCount.innerText = state.projects.length;
+                this.updateCharts();
+
+                if (state.projects.length === 0) {
+                    emptyState.classList.remove('hidden');
+                } else {
+                    emptyState.classList.add('hidden');
+                    
+                    [...state.projects].reverse().forEach(project => {
+                        const card = document.createElement('div');
+                        card.className = "bg-white rounded-2xl p-6 shadow-sm border border-slate-100 hover:shadow-md transition-shadow cursor-pointer flex flex-col group relative overflow-hidden";
+                        card.onclick = () => this.goToProject(project.id);
+                        
+                        const totalSteps = project.steps.length;
+                        const completedSteps = project.steps.filter(s => s.done).length;
+                        let nextStepText = "Sin pasos definidos";
+                        
+                        const nextStep = project.steps.find(s => !s.done);
+                        if (nextStep) nextStepText = nextStep.text;
+                        else if (totalSteps > 0 && totalSteps === completedSteps) nextStepText = "¡Todos los pasos completados!";
+
+                        card.innerHTML = `
+                            <div class="absolute top-0 left-0 w-1 h-full bg-indigo-500 transform origin-bottom scale-y-0 group-hover:scale-y-100 transition-transform"></div>
+                            <h4 class="text-xl font-bold text-slate-800 mb-1 group-hover:text-indigo-600 transition-colors">${project.title}</h4>
+                            <p class="text-xs text-slate-400 mb-4">${project.createdAt}</p>
+                            
+                            <div class="mt-auto pt-4 border-t border-slate-50">
+                                <p class="text-xs text-slate-500 mb-1">Próximo paso:</p>
+                                <p class="text-sm font-medium text-indigo-600 truncate flex items-center gap-1">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                                    ${nextStepText}
+                                </p>
+                            </div>
+                            <div class="flex gap-3 mt-4 text-xs text-slate-400 font-medium">
+                                <span class="flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg> ${completedSteps}/${totalSteps}</span>
+                                <span class="flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg> ${project.notes.length}</span>
+                                <span class="flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg> ${project.expenses.length}</span>
+                            </div>
+                        `;
+                        projectsContainer.appendChild(card);
+                    });
+                }
+            },
+
+            // Renderizado Detalles del Proyecto
+            renderProjectDetail() {
+                const project = state.projects.find(p => p.id === state.currentProjectId);
+                if (!project) return this.goHome();
+
+                detailTitle.innerText = project.title;
+                detailDate.innerText = project.createdAt;
+
+                this.renderSteps(project);
+                this.renderNotes(project);
+                this.renderExpenses(project);
+            },
+
+            renderSteps(project) {
+                stepsList.innerHTML = '';
+                if(project.steps.length === 0) {
+                    stepsList.innerHTML = '<p class="text-sm text-slate-400 text-center py-4">Añade el primer paso para avanzar.</p>';
+                }
+                project.steps.forEach(step => {
+                    const div = document.createElement('div');
+                    div.className = `flex items-center justify-between p-3 rounded-xl border ${step.done ? 'bg-slate-50 border-transparent text-slate-400' : 'bg-white border-slate-100 text-slate-700 shadow-sm'} transition-colors`;
+                    div.innerHTML = `
+                        <label class="flex items-center gap-3 cursor-pointer flex-1">
+                            <input type="checkbox" ${step.done ? 'checked' : ''} onchange="app.toggleStep(${step.id})" class="w-5 h-5 rounded text-emerald-500 focus:ring-emerald-500 accent-emerald-500 cursor-pointer">
+                            <span class="text-sm font-medium ${step.done ? 'line-through' : ''}">${step.text}</span>
+                        </label>
+                        <button onclick="app.deleteItem('steps', ${step.id})" class="text-slate-300 hover:text-red-500 transition-colors p-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
+                    `;
+                    stepsList.appendChild(div);
+                });
+            },
+
+            renderNotes(project) {
+                notesList.innerHTML = '';
+                if(project.notes.length === 0) {
+                    notesList.innerHTML = '<p class="text-sm text-slate-400 text-center py-4">Sin notas aún.</p>';
+                }
+                [...project.notes].reverse().forEach(note => {
+                    const div = document.createElement('div');
+                    div.className = "bg-amber-50/50 p-3 rounded-xl border border-amber-100 relative group";
+                    div.innerHTML = `
+                        <p class="text-sm text-slate-700 whitespace-pre-wrap pr-6">${note.text}</p>
+                        <button onclick="app.deleteItem('notes', ${note.id})" class="absolute top-2 right-2 text-amber-200 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                        </button>
+                    `;
+                    notesList.appendChild(div);
+                });
+            },
+
+            renderExpenses(project) {
+                expensesList.innerHTML = '';
+                let total = 0;
+
+                if(project.expenses.length === 0) {
+                    expensesList.innerHTML = '<p class="text-sm text-slate-400 text-center py-4">Sin gastos registrados.</p>';
+                }
+
+                project.expenses.forEach(exp => {
+                    total += exp.amount;
+                    const div = document.createElement('div');
+                    div.className = "flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-white shadow-sm";
+                    div.innerHTML = `
+                        <div class="flex-1 pr-2">
+                            <p class="text-sm font-medium text-slate-700">${exp.desc}</p>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="text-sm font-bold text-rose-600">$${exp.amount.toFixed(2)}</span>
+                            <button onclick="app.deleteItem('expenses', ${exp.id})" class="text-slate-300 hover:text-red-500 transition-colors">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                            </button>
+                        </div>
+                    `;
+                    expensesList.appendChild(div);
+                });
+
+                expenseTotal.innerText = `$${total.toFixed(2)}`;
+            },
+
+            // Acciones
+            addProject(title) {
+                const newProject = {
+                    id: 'proj_' + Date.now(),
+                    title: title,
+                    createdAt: new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }),
+                    steps: [],
+                    notes: [],
+                    expenses: []
+                };
+                state.projects.push(newProject);
+                this.renderDashboard();
+            },
+
+            toggleStep(stepId) {
+                const project = state.projects.find(p => p.id === state.currentProjectId);
+                const step = project.steps.find(s => s.id === stepId);
+                if (step) {
+                    step.done = !step.done;
+                    this.renderSteps(project);
+                    this.updateCharts(); // Actualizar gráficas si están abiertas
+                }
+            },
+
+            deleteItem(type, itemId) {
+                const project = state.projects.find(p => p.id === state.currentProjectId);
+                if (!project) return;
+
+                if (type === 'steps') {
+                    project.steps = project.steps.filter(s => s.id !== itemId);
+                    this.renderSteps(project);
+                } else if (type === 'notes') {
+                    project.notes = project.notes.filter(n => n.id !== itemId);
+                    this.renderNotes(project);
+                } else if (type === 'expenses') {
+                    project.expenses = project.expenses.filter(e => e.id !== itemId);
+                    this.renderExpenses(project);
+                }
+                this.updateCharts(); // Actualizar gráficas tras borrar
+            },
+
+            setupEventListeners() {
+                // Nuevo Proyecto
+                document.getElementById('form-new-project').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const input = document.getElementById('input-new-project');
+                    if(input.value.trim() !== '') {
+                        this.addProject(input.value.trim());
+                        input.value = '';
+                    }
+                });
+
+                // Nuevo Paso
+                document.getElementById('form-step').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const input = document.getElementById('input-step');
+                    const text = input.value.trim();
+                    if(text !== '') {
+                        const project = state.projects.find(p => p.id === state.currentProjectId);
+                        project.steps.push({ id: Date.now(), text: text, done: false });
+                        input.value = '';
+                        this.renderSteps(project);
+                        this.updateCharts();
+                    }
+                });
+
+                // Nueva Nota
+                document.getElementById('form-note').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const input = document.getElementById('input-note');
+                    const text = input.value.trim();
+                    if(text !== '') {
+                        const project = state.projects.find(p => p.id === state.currentProjectId);
+                        project.notes.push({ id: Date.now(), text: text });
+                        input.value = '';
+                        this.renderNotes(project);
+                        this.updateCharts();
+                    }
+                });
+
+                // Nuevo Gasto
+                document.getElementById('form-expense').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const descInput = document.getElementById('input-expense-desc');
+                    const amountInput = document.getElementById('input-expense-amount');
+                    const desc = descInput.value.trim();
+                    const amount = parseFloat(amountInput.value);
+
+                    if(desc !== '' && !isNaN(amount)) {
+                        const project = state.projects.find(p => p.id === state.currentProjectId);
+                        project.expenses.push({ id: Date.now(), desc: desc, amount: amount });
+                        descInput.value = '';
+                        amountInput.value = '';
+                        this.renderExpenses(project);
+                        this.updateCharts();
+                    }
+                });
+            }
+        };
+
+        // Iniciar la aplicación cuando cargue el DOM
+        document.addEventListener('DOMContentLoaded', () => {
+            app.init();
+        });
+
+    </script>
+</body>
+</html>
+
+
