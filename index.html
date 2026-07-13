@@ -202,28 +202,31 @@
     </main>
 
     <script>
-        // --- ESTADO DE LA APLICACIÓN (EN MEMORIA) ---
+        // --- ESTADO DE LA APLICACIÓN (EN MEMORIA / LOCALSTORAGE) ---
+        const savedProjects = localStorage.getItem('impulso_projects');
+        const defaultProjects = [
+            {
+                id: 'proj_' + Date.now(),
+                title: 'Crear Tienda Online',
+                createdAt: new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }),
+                steps: [
+                    { id: 1, text: 'Comprar dominio', done: true },
+                    { id: 2, text: 'Diseñar logo', done: false }
+                ],
+                notes: [
+                    { id: 1, text: 'Usar Shopify o WooCommerce. Hay que comparar precios.' }
+                ],
+                expenses: [
+                    { id: 1, desc: 'Dominio anual', amount: 12.50 }
+                ]
+            }
+        ];
+
         const state = {
             currentView: 'dashboard', // 'dashboard' | 'project-detail'
             currentProjectId: null,
             showStats: false,
-            projects: [
-                {
-                    id: 'proj_' + Date.now(),
-                    title: 'Crear Tienda Online',
-                    createdAt: new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' }),
-                    steps: [
-                        { id: 1, text: 'Comprar dominio', done: true },
-                        { id: 2, text: 'Diseñar logo', done: false }
-                    ],
-                    notes: [
-                        { id: 1, text: 'Usar Shopify o WooCommerce. Hay que comparar precios.' }
-                    ],
-                    expenses: [
-                        { id: 1, desc: 'Dominio anual', amount: 12.50 }
-                    ]
-                }
-            ]
+            projects: savedProjects ? JSON.parse(savedProjects) : defaultProjects
         };
 
         // --- REFERENCIAS AL DOM ---
@@ -277,6 +280,11 @@
                 setTimeout(() => {
                     splash.style.display = 'none';
                 }, 500);
+            },
+
+            // --- GUARDADO LOCAL ---
+            saveData() {
+                localStorage.setItem('impulso_projects', JSON.stringify(state.projects));
             },
 
             // --- GRÁFICAS ---
@@ -536,6 +544,7 @@
                     expenses: []
                 };
                 state.projects.push(newProject);
+                this.saveData();
                 this.renderDashboard();
             },
 
@@ -544,6 +553,7 @@
                 const step = project.steps.find(s => s.id === stepId);
                 if (step) {
                     step.done = !step.done;
+                    this.saveData();
                     this.renderSteps(project);
                     this.updateCharts(); // Actualizar gráficas si están abiertas
                 }
@@ -563,6 +573,7 @@
                     project.expenses = project.expenses.filter(e => e.id !== itemId);
                     this.renderExpenses(project);
                 }
+                this.saveData();
                 this.updateCharts(); // Actualizar gráficas tras borrar
             },
 
@@ -586,6 +597,7 @@
                         const project = state.projects.find(p => p.id === state.currentProjectId);
                         project.steps.push({ id: Date.now(), text: text, done: false });
                         input.value = '';
+                        this.saveData();
                         this.renderSteps(project);
                         this.updateCharts();
                     }
@@ -600,6 +612,7 @@
                         const project = state.projects.find(p => p.id === state.currentProjectId);
                         project.notes.push({ id: Date.now(), text: text });
                         input.value = '';
+                        this.saveData();
                         this.renderNotes(project);
                         this.updateCharts();
                     }
@@ -618,6 +631,7 @@
                         project.expenses.push({ id: Date.now(), desc: desc, amount: amount });
                         descInput.value = '';
                         amountInput.value = '';
+                        this.saveData();
                         this.renderExpenses(project);
                         this.updateCharts();
                     }
@@ -633,5 +647,6 @@
     </script>
 </body>
 </html>
+
 
 
